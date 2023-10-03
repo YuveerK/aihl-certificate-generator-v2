@@ -11,10 +11,10 @@ import {
 import signature from "./images/signature.jpg";
 import medicine from "./images/medicine.png";
 import hwseta from "./images/hwseta.jpg";
-Font.register({
-  family: "Calibri Light",
-  src: "https://fonts.cdnfonts.com/css/calibri-light?styles=15794",
-});
+// Font.register({
+//   family: "Calibri Light",
+//   src: "https://fonts.cdnfonts.com/css/calibri-light?styles=15794",
+// });
 
 const styles = StyleSheet.create({
   body: {
@@ -143,7 +143,7 @@ const Certificate = ({
                       {
                         marginTop: 0,
                         fontSize: 10,
-                        fontFamily: "Calibri Light",
+                        // fontFamily: "Calibri Light",
                       },
                     ]}
                   >
@@ -155,7 +155,7 @@ const Certificate = ({
                       {
                         marginTop: 5,
                         fontSize: 10,
-                        fontFamily: "Calibri Light",
+                        // fontFamily: "Calibri Light",
                       },
                     ]}
                   >
@@ -174,7 +174,7 @@ const Certificate = ({
                       {
                         marginTop: 15,
                         fontSize: 10,
-                        fontFamily: "Calibri Light",
+                        // fontFamily: "Calibri Light",
                       },
                     ]}
                   >
@@ -186,7 +186,7 @@ const Certificate = ({
                       {
                         marginTop: 15,
                         fontSize: 10,
-                        fontFamily: "Calibri Light",
+                        // fontFamily: "Calibri Light",
                       },
                     ]}
                   >
