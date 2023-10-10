@@ -4,6 +4,9 @@ import JSZip from "jszip";
 import FileSaver from "file-saver";
 import Certificate from "./Certificate";
 import Navbar from "./Navbar";
+import axios from "axios";
+import FileHandler from "./FileHandler";
+
 function App() {
   const [jsonContent, setJsonContent] = useState(null);
   const [moduleName, setModuleName] = useState("");
@@ -18,7 +21,6 @@ function App() {
           const json = JSON.parse(e.target.result);
           setJsonContent(json);
         } catch (error) {
-          console.error("Error parsing JSON file:", error);
           alert("An error occurred while parsing the JSON file.");
         }
       };
@@ -38,72 +40,25 @@ function App() {
     "SURNAME OF THE LEARNER",
     "ID NUMBER OF THE LEARNER",
   ];
-  // Helper function to chunk an array
-  const chunkArray = (array, size) => {
-    const chunked_arr = [];
-    let copied = [...array];
-    const numOfChild = Math.ceil(copied.length / size);
-    for (let i = 0; i < numOfChild; i++) {
-      chunked_arr.push(copied.splice(0, size));
-    }
-    return chunked_arr;
-  };
+
+  const fileHandler = new FileHandler(jsonContent, moduleName);
 
   const downloadAll = useCallback(async () => {
-    console.log("Starting downloadAll function...");
-    const zip = new JSZip();
-
-    // Chunk jsonContent array into smaller arrays of size 100 (or any other size you find suitable)
-    console.log("Chunking jsonContent array...");
-    const chunks = chunkArray(jsonContent, 100);
-    console.log(`Created ${chunks.length} chunks.`);
-
-    for (let i = 0; i < chunks.length; i++) {
-      console.log(`Processing chunk ${i + 1} of ${chunks.length}...`);
-      const pdfs = await Promise.all(
-        chunks[i].map(async (row, rowIndex) => {
-          console.log(
-            `  Generating PDF for row ${rowIndex + 1} of chunk ${i + 1}...`
-          );
-          const doc = (
-            <Certificate
-              first_name={
-                row["MIDDLE NAME OF THE LEARNER"]
-                  ? `${row["FIRST NAME OF THE LEARNER"]} ${row["MIDDLE NAME OF THE LEARNER"]}`
-                  : row["FIRST NAME OF THE LEARNER"]
-              }
-              last_name={row["SURNAME OF THE LEARNER"]}
-              id_number={row["ID NUMBER OF THE LEARNER"]}
-              course_name={moduleName}
-              completed_date={"test"}
-            />
-          );
-          const blob = await pdf(doc).toBlob();
-          console.log(
-            `  Completed PDF for row ${rowIndex + 1} of chunk ${i + 1}.`
-          );
-          setProgress(((i + 1) / chunks.length) * 100);
-
-          return {
-            name: `${row["FIRST NAME OF THE LEARNER"]}_${row["SURNAME OF THE LEARNER"]}_Certificate.pdf`,
-            content: blob,
-          };
-        })
-      );
-      console.log(`Completed processing chunk ${i + 1} of ${chunks.length}.`);
-      pdfs.forEach((pdf) => {
-        zip.file(pdf.name, pdf.content);
-      });
-    }
-
-    console.log("Generating zip file...");
-    const content = await zip.generateAsync({ type: "blob" });
-    console.log("Completed generating zip file.");
-
-    console.log("Prompting user to download zip file...");
-    FileSaver.saveAs(content, "certificates.zip");
-    console.log("Completed downloadAll function.");
+    await fileHandler.downloadAll(setProgress);
   }, [jsonContent, moduleName]);
+
+  const generateTextFile = useCallback(() => {
+    fileHandler.generateTextFile();
+  }, [jsonContent, moduleName]);
+
+  const organizeFilesHandler = async () => {
+    try {
+      const response = await axios.get("http://localhost:3001/organize-files");
+      console.log(response.data); // Log the response from the server
+    } catch (error) {
+      console.error("Error organizing files:", error);
+    }
+  };
 
   return (
     <div className="flex flex-col h-screen overflow-auto bg-gray-900 text-white">
@@ -130,12 +85,12 @@ function App() {
             ></div>
           </div>
         </div>
-        <div className="flex items-center">
+        <div className="flex items-center flex-wrap w-full max-w-lg space-y-4">
           <input
             type="file"
             accept=".json"
             onChange={handleFileChange}
-            className="mb-4 p-2 border border-gray-300 rounded mr-8"
+            className="w-full p-2 border border-gray-300 rounded text-black"
           />
 
           <input
@@ -143,14 +98,28 @@ function App() {
             value={moduleName}
             onChange={handleModuleNameChange}
             placeholder="Enter Module Name"
-            className="mb-4 p-2 border border-gray-300 rounded w-full max-w-lg"
+            className="w-full p-2 border border-gray-300 rounded text-black"
           />
 
           <button
+            onClick={generateTextFile}
+            className="w-full mb-4 p-2 border border-teal-500 rounded bg-teal-500 text-white hover:bg-teal-700"
+          >
+            Generate Text File
+          </button>
+
+          <button
             onClick={downloadAll}
-            className="mb-4 p-2 border border-gray-300 rounded"
+            className="w-full mb-4 p-2 border border-blue-500 rounded bg-blue-500 text-white hover:bg-blue-700"
           >
             Download All Certificates
+          </button>
+
+          <button
+            onClick={organizeFilesHandler}
+            className="w-full mb-4 p-2 border border-green-500 rounded bg-green-500 text-white hover:bg-green-700"
+          >
+            Organize Files
           </button>
         </div>
 
@@ -164,7 +133,6 @@ function App() {
                       {header}
                     </th>
                   ))}
-                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -182,28 +150,6 @@ function App() {
                         {row[header]}
                       </td>
                     ))}
-                    <td>
-                      {/* <PDFDownloadLink
-                        document={
-                          <Certificate
-                            first_name={
-                              row["MIDDLE NAME OF THE LEARNER"]
-                                ? `${row["FIRST NAME OF THE LEARNER"]} ${row["MIDDLE NAME OF THE LEARNER"]}`
-                                : row["FIRST NAME OF THE LEARNER"]
-                            }
-                            last_name={row["SURNAME OF THE LEARNER"]}
-                            id_number={row["ID NUMBER OF THE LEARNER"]}
-                            course_name={moduleName}
-                            completed_date={"test"}
-                          />
-                        }
-                        fileName={`${row["FIRST NAME OF THE LEARNER"]}_${row["SURNAME OF THE LEARNER"]}_Certificate.pdf`}
-                      >
-                        {({ blob, url, loading, error }) =>
-                          loading ? "Loading document..." : "Download now!"
-                        }
-                      </PDFDownloadLink> */}
-                    </td>
                   </tr>
                 ))}
               </tbody>
